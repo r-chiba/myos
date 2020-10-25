@@ -4,7 +4,7 @@ ENTRY(entry16)
 SECTIONS {
     . = 0x9000;
     .text : {
-        entry16.o(.text)
+        loader16.o(.text)
         *(.text)
     }
     .data : { *(.data) }
