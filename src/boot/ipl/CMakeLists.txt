@@ -9,3 +9,7 @@ add_executable(ipl ipl.asm)
 #    SUFFIX ".elf"
 #    #LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/ipl.ld
 #)
+target_include_directories(ipl
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../../include/
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../common/
+)

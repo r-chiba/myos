@@ -7,14 +7,8 @@ global entry32
 entry32:
     cli
 
-    ; disable PIC
-    mov     al, 0xff
-    out     0x21, al
-    mov     al, 0xff
-    out     0xa1, al
-
     ; set segment registers
-    mov     eax, (3<<3)         ; 32bit data segment descriptor
+    mov     eax, (2<<3)         ; 32-bit data segment descriptor
     mov     ss, eax
     mov     ds, eax
     mov     es, eax
@@ -87,80 +81,13 @@ enable_long_mode:
     or      eax, (1<<31)
     mov     cr0, eax
 
-    ; go to 64bit world
+    ; go to 64-bit world
 enter_64:
-    push    (2<<3)              ; 64bit code segment descriptor
+    push    (3<<3)              ; 64-bit code segment descriptor
     push    entry64
     retf
 
-halt_error:
-    mov     si, message2
-    call    printstr
 halt:
     hlt
     jmp     halt
-printstr:
-    push    ax
-    push    bx
-printstr.1:
-    lodsb
-    test    al, al
-    jnz     putc
-    pop     bx
-    pop     ax
-    ret
-putc:
-    mov     ah, 0x0e
-    mov     bx, 0x15
-    int     0x10
-    jmp     printstr.1
-; convert a 16-bit integer to its ASCII code and write it to [es:di]
-bin2ascii:
-    push    bx
-    mov     bx, ax
-    shr     ax, 12
-    call    bin2ascii.lsb4
-    shr     ax, 8
-    call    bin2ascii.lsb4
-    shr     ax, 4
-    call    bin2ascii.lsb4
-    call    bin2ascii.lsb4
-    pop     bx
-    ret
-bin2ascii.lsb4:
-    and     al, 0x0f
-    cmp     al, 0x0a
-    sbb     al, 0x69 ; ???
-    das
-    stosb
-    mov     ax, bx ; preserve the ax value
-    ret
-; print an error message with error code (at ax)
-printerror:
-    push    bx
-    push    es
-    push    si
-    push    di
-    xor     bx, bx
-    mov     es, bx
-    mov     di, errno
-    call    bin2ascii
-    mov     si, errmsg
-    call    printstr
-    pop     di
-    pop     si
-    pop     es
-    pop     bx
-    ret
-
-section .data
-message1:
-    db      `Hello World! This is OS loader.\r\n`, 0x00
-message2:
-    db      `Error occured.\r\n`, 0x00
-errmsg:
-    db      'Disk error: 0x'
-errno:
-    db      0x3d, 0x3d, 0x3d, 0x3d
-    db      `\r\n`, 0x00
 

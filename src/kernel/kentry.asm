@@ -1,10 +1,10 @@
 bits 64
 
-extern centry
+extern kmain
 
-section .text
-global entry64
-entry64:
+section .entry.text
+global kentry
+kentry:
     cli
 
     ; clear the screen
@@ -21,14 +21,7 @@ entry64:
     mov     dx, 0x3d4
     out     dx, ax
 
-    ; go to kernel
-    ;call    centry
-    mov     rax, 0x10000
-    call    rax
-    ;push    (3<<3)              ; 64bit code segment descriptor
-    ;push    0x10000
-    ;db      0x48                ; REX.W prefix to make sure params for retf (lret) are 64-bit
-    ;retf
+    call    kmain
 
 halt:
     hlt

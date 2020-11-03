@@ -1,22 +1,15 @@
-%define BOOTINFO_START_ADDR 0x8000
-%define BOOTINFO_SMAP_NENTRIES_ADDR (BOOTINFO_START_ADDR+0x10)
-%define BOOTINFO_SMAP_START_ADDR (BOOTINFO_START_ADDR+0x20)
-; boot info:
-;   offset (size)
-;   + 0x00 (1)     : drive no.
-;   + 0x10 (2)     : # of system memory map entries
-;   + 0x20 (24*n)  : system memory map entries
+%include "boot/bootinfo.inc"
 
 bits 16
 
 extern entry32
 
-section .text
+section .entry.text
 global entry16
 entry16:
     ; print a welcome message
-    ;mov     si, message1
-    ;call    printstr
+    mov     si, message1
+    call    printstr
 
     call    check_long_mode
     jc      halt_error
@@ -27,9 +20,25 @@ entry16:
     call    read_smap
     jc      halt_error
 
+    call    load_kernel
+    jc      halt_error
+
     ; enable protected mode
 enable_protected_mode:
+    ; disable maskable interrupts
     cli
+    ; disable non-maskable interrupts
+    in      al, 0x70
+    or      al, 0x80
+    out     0x70, al
+    call    delay_1usec
+
+    ; disable PICs
+    mov     al, 0xff            ; mask all interrupts
+    out     0xa1, al            ; secondary PIC
+    mov     al, 0xfb            ; mask all interrupts other than cascade
+    out     0x21, al            ; primary PIC
+
     ; load GDT and IDT
     lgdt    [gdtr]
     lidt    [idtr]
@@ -39,7 +48,7 @@ enable_protected_mode:
     or      al, (1<<0)
     mov     cr0, eax
 
-    ; go to 32bit world
+    ; go to 32-bit world
 enter_32bit:
     jmp     (1<<3):entry32
 
@@ -106,7 +115,7 @@ enable_a20.end:
     pop     ax
     ret
 
-    ; save system memory map to 0x8020
+    ; save system memory map to the bootinfo region
 %define QUERY_SMAP_SIG 0x534d4150   ; "SMAP"
 %define QUERY_SMAP_ENTRY_SIZE 0x18
 read_smap:
@@ -144,64 +153,45 @@ read_smap.end:
     pop     eax
     ret
 
-halt_error:
-    mov     si, message2
-    call    printstr
-halt:
-    hlt
-    jmp     halt
-printstr:
+load_kernel:
+%define KERNEL_SEGMENT 0x1000
+%define KERNEL_OFFSET 0x0000
+%define KERNEL_SIZE_IN_SECTORS  0x0100
     push    ax
     push    bx
-printstr.1:
-    lodsb
-    test    al, al
-    jnz     putc
+    push    cx
+    push    dx
+    push    es
+    mov     dl, [BOOTINFO_DRIVE_NO_ADDR]
+    mov     cx, KERNEL_SIZE_IN_SECTORS
+    mov     ax, 0x21
+    mov     bx, KERNEL_SEGMENT
+    mov     es, bx
+    mov     bx, KERNEL_OFFSET
+    call    readsectors
+    jc      load_kernel.error
+    jmp     load_kernel.end
+load_kernel.error:
+    stc
+load_kernel.end:
+    pop     es
+    pop     dx
+    pop     cx
     pop     bx
     pop     ax
     ret
-putc:
-    mov     ah, 0x0e
-    mov     bx, 0x15
-    int     0x10
-    jmp     printstr.1
-; convert a 16-bit integer to its ASCII code and write it to [es:di]
-bin2ascii:
-    push    bx
-    mov     bx, ax
-    shr     ax, 12
-    call    bin2ascii.lsb4
-    shr     ax, 8
-    call    bin2ascii.lsb4
-    shr     ax, 4
-    call    bin2ascii.lsb4
-    call    bin2ascii.lsb4
-    pop     bx
-    ret
-bin2ascii.lsb4:
-    and     al, 0x0f
-    cmp     al, 0x0a
-    sbb     al, 0x69 ; ???
-    das
-    stosb
-    mov     ax, bx ; preserve the ax value
-    ret
-; print an error message with error code (at ax)
-printerror:
-    push    bx
-    push    es
-    push    si
-    push    di
-    xor     bx, bx
-    mov     es, bx
-    mov     di, errno
-    call    bin2ascii
-    mov     si, errmsg
+
+%include "read_sector.asm"
+%include "util.asm"
+
+halt_error:
+    mov     si, message2
     call    printstr
-    pop     di
-    pop     si
-    pop     es
-    pop     bx
+    jmp     halt
+
+delay_1usec:
+%define DELAY_PORT 0x80
+    out     DELAY_PORT, al
     ret
 
 section .data
@@ -209,11 +199,6 @@ message1:
     db      `Hello World! This is OS loader.\r\n`, 0x00
 message2:
     db      `Error occured.\r\n`, 0x00
-errmsg:
-    db      'Disk error: 0x'
-errno:
-    db      0x3d, 0x3d, 0x3d, 0x3d
-    db      `\r\n`, 0x00
 
 align 16
 gdtr:
@@ -222,12 +207,14 @@ gdtr:
 align 16
 gdt: ; Global Descriptor Table
     dd      0x0, 0x0                                       ; NULL descriptor
-    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xcf, 0x00 ; 32bit code segment
-    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xaf, 0x00 ; 64bit code segment
-    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x92, 0xcf, 0x00 ; 32bit data segment
+    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xcf, 0x00 ; 32-bit code segment
+    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x92, 0xcf, 0x00 ; 32-bit data segment
+    db      0xff, 0xff, 0x00, 0x00, 0x00, 0x9a, 0xaf, 0x00 ; 64-bit code segment
+    ;db      0xff, 0xff, 0x00, 0x00, 0x00, 0x92, 0xaf, 0x00 ; 64-bit data segment
 gdt.end:
 
 align 16
 idtr:
     dw      0x0
     dq      0x0
+

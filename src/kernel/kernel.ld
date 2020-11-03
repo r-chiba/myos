@@ -1,8 +1,8 @@
 OUTPUT_ARCH(i386:x86-64);
-ENTRY(entry16)
+ENTRY(kentry)
 
 SECTIONS {
-    . = 0x9000;
+    . = 0x10000;
     .text : {
         *(.entry.text)
         *(.text)
