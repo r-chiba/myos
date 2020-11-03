@@ -2,7 +2,7 @@
 ## Description
 This is a personal project to study how OS's work.
 
-# Assumption
+## Assumption
 * x86-64 (AMD64) supported CPU
 * Boot from Legacy BIOS
 
