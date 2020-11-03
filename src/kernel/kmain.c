@@ -34,7 +34,6 @@ void kmain(void)
     uint8_t *smap = (uint8_t *)BOOTINFO_SMAP_START_ADDR;
     printf("!!!myos kernel!!!\n");
     printf("physical memory map (e820):\n");
-    //printf("Base             Size             Type\n");
     for (int i = 0; i < nentries; i++) {
         uint8_t *entry = smap + i*BOOTINFO_SMAP_ENTRY_SIZE;
         uint64_t base = *(uint64_t *)entry;
