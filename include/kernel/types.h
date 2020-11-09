@@ -1,9 +1,9 @@
 #ifndef MYOS_KERNEL_TYPES_H_
 #define MYOS_KERNEL_TYPES_H_
 
-//#if __LP64__ != 1
-//#error unsupported environment
-//#endif
+#if __LP64__ != 1
+#error unsupported environment
+#endif
 
 #define NULL ((void *)0)
 #define CHAR_BIT (__CHAR_BIT__)

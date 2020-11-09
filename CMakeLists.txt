@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_C_COMPILER /usr/bin/clang-10)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
-set(CMAKE_C_FLAGS "-std=c11 -Wall -Wextra -Wpedantic -nostdinc -nostdlib -fno-builtin -fno-stack-protector -mno-sse")
+set(CMAKE_C_FLAGS "-d -std=c11 -Wall -Wextra -Wpedantic -nostdinc -nostdlib -ffreestanding -fno-builtin -fno-stack-protector -mno-sse")
 
 project(myos C)
 
@@ -17,7 +17,7 @@ add_subdirectory(src)
 
 add_custom_target(run ALL
     COMMAND qemu-system-x86_64
-                -m 1024
+                -m 4096
                 -drive id=disk,file=os.img,format=raw,if=none
                 -device ahci,id=ahci
                 -device ide-hd,drive=disk,bus=ahci.0

@@ -1,17 +1,11 @@
 #include <kernel/types.h>
 #include <kernel/util.h>
+#include <kernel/bootinfo.h>
+#include <kernel/physmem.h>
+#include <freebsd/sys/sys/queue.h>
 
 #define DEFAULT_COLOR 0x07 // lightgray-on-black
 #define VMEM_START_ADDR 0xb8000
-
-#define BOOTINFO_START_ADDR 0x8000
-#define BOOTINFO_DRIVE_NO_ADDR      (BOOTINFO_START_ADDR+0x00)
-#define BOOTINFO_SECTORS_ADDR       (BOOTINFO_START_ADDR+0x02)
-#define BOOTINFO_HEADS_ADDR         (BOOTINFO_START_ADDR+0x04)
-#define BOOTINFO_TRACKS_ADDR        (BOOTINFO_START_ADDR+0x06)
-#define BOOTINFO_SMAP_NENTRIES_ADDR (BOOTINFO_START_ADDR+0x10)
-#define BOOTINFO_SMAP_START_ADDR    (BOOTINFO_START_ADDR+0x20)
-#define BOOTINFO_SMAP_ENTRY_SIZE 24
 
 ptrdiff_t vmem_cur = 0;
 
@@ -39,7 +33,8 @@ void kmain(void)
         uint64_t base = *(uint64_t *)entry;
         uint64_t size = *(uint64_t *)(entry + sizeof(uint64_t));
         uint32_t type = *(uint32_t *)(entry + sizeof(uint64_t)*2);
-        printf("[%016lx-%016lx] %s\n", base, base+size-1, (type == 1 ? "usable" : "reserved"));
+        printf("[%016lx-%016lx] %s(%u)\n", base, base+size-1, (type == 1 ? "usable" : "reserved"), type);
     }
+    init_physmem();
 }
 
