@@ -24,17 +24,7 @@ void putchar(int c)
 
 void kmain(void)
 {
-    uint16_t nentries = *(uint16_t *)BOOTINFO_SMAP_NENTRIES_ADDR;
-    uint8_t *smap = (uint8_t *)BOOTINFO_SMAP_START_ADDR;
     printf("!!!myos kernel!!!\n");
-    printf("physical memory map (e820):\n");
-    for (int i = 0; i < nentries; i++) {
-        uint8_t *entry = smap + i*BOOTINFO_SMAP_ENTRY_SIZE;
-        uint64_t base = *(uint64_t *)entry;
-        uint64_t size = *(uint64_t *)(entry + sizeof(uint64_t));
-        uint32_t type = *(uint32_t *)(entry + sizeof(uint64_t)*2);
-        printf("[%016lx-%016lx] %s(%u)\n", base, base+size-1, (type == 1 ? "usable" : "reserved"), type);
-    }
     init_physmem();
 }
 
