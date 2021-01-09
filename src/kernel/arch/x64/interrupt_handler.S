@@ -5,7 +5,7 @@
 
 /*
  * save all general-purpose registers to the stack
- * and align the stack to 16-bit boundary
+ * and align the stack to 16-byte boundary
  */
 .macro saveGprs
 pushq   %rbp
@@ -58,17 +58,11 @@ andq    $0xfffffffffffff000, %rdx
 movl    $0, 0x0b0(%rdx)
 .endm
 
-/*
- * void defaultInterruptHandler(void);
- */
 ASMFUNC_START(defaultInterruptHandler)
 1:
     jmp 1b
 ASMFUNC_END(defaultInterruptHandler)
 
-/*
- * void keyboardInterruptHandler(void);
- */
 .extern keyboardInterruptHandlerMain;
 ASMFUNC_START(keyboardInterruptHandler)
     saveGprs

@@ -11,6 +11,7 @@ ASMFUNC_START(halt)
     hlt
     jmp     1b
 ASMFUNC_END(halt)
+
 /*
  * void disableInterrupts(void);
  * disable maskable interrupts

@@ -43,6 +43,6 @@ typedef struct __attribute__((packed)) myos_acpi_xsdt {
 
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp);
 int isValidAcpiChecksum(const void *data, size_t len);
-MyOsAcpiSdtHeader *findDescriptionTable(uint8_t signature[ACPI_SDT_SIG_LEN]);
+MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN]);
 
 #endif // MYOS_KERNEL_ACPI_H_

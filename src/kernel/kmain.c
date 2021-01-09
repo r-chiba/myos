@@ -4,7 +4,7 @@
 #include <graphics.h>
 #include <acpi.h>
 
-// architecture-dependent initialization routine
+// architecture-specific initialization routine prototype
 void archInit(void);
 
 __attribute__((section(".text.entry")))
@@ -14,12 +14,12 @@ void kmain(MyOsBootParameter *bootparam)
     graphicsInit(&bootparam->graphicsInfo);
     printf("!!!myos kernel!!!\n");
 
-    // archtecture-specific initialization routines may be use ACPI tables
+    // archtecture-specific initialization routines may use ACPI tables
     acpiInit((MyOsAcpiRsdpDescriptor *)bootparam->acpiTableAddr);
 
     archInit();
 
-    printf("myos initialization done.\n");
+    printf("myos kernel initialization done.\n");
     while (1) halt();
 }
 

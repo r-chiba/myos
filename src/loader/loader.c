@@ -53,7 +53,6 @@ void putchar(int c)
 }
 #endif
 
-#if 1
 EFI_GRAPHICS_OUTPUT_PROTOCOL *gop = NULL;
 void drawPixel(
     IN UINT32 x,
@@ -88,7 +87,7 @@ void myPutChar(
         }
     }
 }
-#endif
+
 void putchar(int c)
 {
     static uint32_t x = 0, y = 0;
@@ -202,7 +201,6 @@ EFI_STATUS EFIAPI UefiMain(
     EFI_LOADED_IMAGE_PROTOCOL *lip = NULL;
     EFI_DEVICE_PATH_FROM_TEXT_PROTOCOL *dpftp = NULL;
     EFI_DEVICE_PATH_TO_TEXT_PROTOCOL *dpttp = NULL;
-    //EFI_GRAPHICS_OUTPUT_PROTOCOL *gop = NULL;
     MyOsBootParameter *bootparam = NULL;
 
     gst = SystemTable;
@@ -214,13 +212,11 @@ EFI_STATUS EFIAPI UefiMain(
                     NULL,
                     (void **)&gop);
     if (EFI_ERROR(status)) {
-        //printf("LocateProtocol error\r\n");
-        while (1);
+        CO->OutputString(CO, L"GOP not found\r\n");
         return EFI_OUT_OF_RESOURCES;
     }
-    //printf("pixel format: %d\r\n", gop->Mode->Info->PixelFormat);
     if (gop->Mode->Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) {
-        //printf("unsupported pixel format for now\r\n");
+        CO->OutputString(CO, L"unsupported pixel format for now\r\n");
         return EFI_OUT_OF_RESOURCES;
     }
 
@@ -249,6 +245,7 @@ EFI_STATUS EFIAPI UefiMain(
         while (1);
         return EFI_OUT_OF_RESOURCES;
     }
+
 #if LOAD_ELF
     printf("magic: 0x%x %c %c %c, kernel size: %lu\r\n",
             kernel[0], kernel[1], kernel[2], kernel[3], ksz);
@@ -330,30 +327,19 @@ EFI_STATUS EFIAPI UefiMain(
                     desc->VirtualStart,
                     desc->NumberOfPages,
                     desc->Attribute);
-            if (i == 4) break;
-            //printf("%03u %016lx %08x %016lx %016lx %016lx %016x",
-            //        i,
-            //        (UINT64)desc,
-            //        desc->Type,
-            //        desc->PhysicalStart,
-            //        desc->VirtualStart,
-            //        desc->NumberOfPages,
-            //        desc->Attribute);
         }
         //while (1);
 #endif
         status = BS->ExitBootServices(ImageHandle, mapkey);
-        //printf("status=%u\r\n", status);
     } while (EFI_ERROR(status));
 
     //printf("go to kernel 0x%016lx\r\n", (UINT64)entrypoint);
 
-    // call MyOS kernel entrypoint along with System V ABI
-    // TODO: prepare a kernel stack
+    // call MyOS kernel entrypoint in accordance with System V ABI
+    // TODO: prepare a kernel stack for the BSP
     __asm__ __volatile__ (
             "call *%1\n\t"
-            :
-            :"D"(bootparam), "r"(entrypoint)
+            :: "D"(bootparam), "r"(entrypoint)
             : "cc", "memory");
 
     // not come here

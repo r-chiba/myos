@@ -34,7 +34,7 @@ static int isValidRsdp(MyOsAcpiRsdpDescriptor *rsdp)
     return 1;
 }
 
-MyOsAcpiSdtHeader *findDescriptionTable(uint8_t signature[ACPI_SDT_SIG_LEN])
+MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN])
 {
     if (!gRsdp) return NULL;
     if (!isValidRsdp(gRsdp)) {
@@ -60,38 +60,5 @@ void acpiInit(MyOsAcpiRsdpDescriptor *rsdp)
 {
     KASSERT(rsdp, "no acpi rsdp\n");
     printf("APIC RSDP addr:0x%016llx\n", (uint64_t)rsdp);
-#if 0
-    if (!isValidRsdp(rsdp)) {
-        panic("xsdt checksum not matched\n");
-    }
-#endif
     gRsdp = rsdp;
-
-#if 0
-    MyOsAcpiXsdt *xsdt = (MyOsAcpiXsdt *)rsdp->xsdtAddress;
-    if (!isValidAcpiChecksum(xsdt, xsdt->header.length)) {
-        panic("xsdt checksum not matched\n");
-    }
-
-    MyOsAcpiMadt *madt = (MyOsAcpiMadt *)findDescriptionTable(xsdt, ACPI_SDT_MADT_SIG);
-    printf("madt address: 0x%016lx\n", (uint64_t)madt);
-    if (!madt) {
-        panic("madt not found\n");
-    }
-
-    uint64_t i = 0;
-    while (i < madt->header.length - sizeof(*madt)) {
-        MyOsAcpiMadtEntryHeader *header = (MyOsAcpiMadtEntryHeader *)(madt->data + i);
-        printf("type: %u, length: %u\n", header->entryType, header->recordLength);
-        if (header->entryType == 1) { // IO APIC
-            MyOsAcpiMadtEntryIoApic *entry = (MyOsAcpiMadtEntryIoApic *)header;
-            printf("I/O APIC ID: %u, Reserved: %u, I/O APIC Address: 0x%08x, Global System Interrupt Base: %u\n",
-                    entry->ioApicId,
-                    entry->reserved,
-                    entry->ioAppicAddress,
-                    entry->globalSystemInterruptBase);
-        }
-        i += header->recordLength;
-    }
-#endif
 }
