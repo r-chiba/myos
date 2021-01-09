@@ -31,8 +31,8 @@
 //#include <sys/limits.h>
 //#include <sys/types.h>
 //#include <string.h>
-#include <kernel/types.h>
-#include <kernel/util.h>
+#include <common/types.h>
+#include <common/util.h>
 
 /*
  * Portable strlen() for 32-bit and 64-bit systems.

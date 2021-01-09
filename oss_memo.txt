@@ -1,0 +1,17 @@
+MyOS uses below OSS's
+* EDK2
+    * repository: https://github.com/tianocore/edk2
+    * branch: master
+    * commit: 872f953 (tag: edk2-stable202011)
+    * memo
+        * edk2/MdePkg/Include -> include/loader/edk2
+* FreeBSD
+    * repository: https://github.com/freebsd/freebsd
+    * branch: master
+    * commit: 627b1ef
+* 30日でできる! OS自作入門 (A book published in Japan)
+    * ISBN: 978-4-8399-1984-9
+    * source code in CD-ROM
+    * memo
+        * projects/05_day/harib02e/hankaku.txt -> tools/font/hankaku.txt
+        * convert to UTF-8

@@ -47,8 +47,8 @@
 //#include <limits.h>
 //#include <string.h>
 //#include "stand.h"
-#include <kernel/types.h>
-#include <kernel/util.h>
+#include <common/types.h>
+#include <common/util.h>
 
 typedef unsigned char u_char;
 typedef unsigned short u_short;

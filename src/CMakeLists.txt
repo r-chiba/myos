@@ -1,2 +1,2 @@
-add_subdirectory(boot)
+add_subdirectory(loader)
 add_subdirectory(kernel)
