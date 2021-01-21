@@ -48,10 +48,10 @@ static void setSelectors(void)
 
 void gdtInit(void)
 {
-    uint64_t t, d;
+    DEBUG_PRINT("%s()\n", __func__);
     loadGdt();
     setSelectors();
-    printf("gdt size:0x%04x, addr:0x%016x\n", 
+    DEBUG_PRINT("gdt size:0x%04x, addr:0x%016x\n", 
                 gdtr.descriptorTableLimit,
                 gdtr.descriptorTableAddress);
 }

@@ -17,7 +17,8 @@ static_assert(sizeof(UINT8) == sizeof(uint8_t), "type mismatch\r\n");
 static_assert(sizeof(UINT16) == sizeof(uint16_t), "type mismatch\r\n");
 static_assert(sizeof(UINT32) == sizeof(uint32_t), "type mismatch\r\n");
 static_assert(sizeof(UINTN) == sizeof(uint64_t), "type mismatch\r\n");
-
+static_assert(sizeof(MyOsMemoryMapEntry) == sizeof(EFI_MEMORY_DESCRIPTOR),
+                "struct mismatch");
 EFI_STATUS loadElf(const UINT8 *file, UINT64 *entrypoint);
 
 #define LOAD_ELF 0
@@ -38,7 +39,7 @@ static EFI_GUID efiDevicePathToTextProtocolGuid = EFI_DEVICE_PATH_TO_TEXT_PROTOC
 static EFI_GUID efiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
 static EFI_GUID efiAcpiTableGuid = EFI_ACPI_TABLE_GUID;
 
-extern const uint8_t font[0xff][16];
+extern const uint8_t font[0x100][16];
 
 typedef void (*MyOsKernelEntryPoint)(MyOsBootParameter *);
 
@@ -332,6 +333,11 @@ EFI_STATUS EFIAPI UefiMain(
 #endif
         status = BS->ExitBootServices(ImageHandle, mapkey);
     } while (EFI_ERROR(status));
+
+    bootparam->memoryMapInfo.mapBase = (UINT64)map;
+    bootparam->memoryMapInfo.mapSize = mapsz;
+    bootparam->memoryMapInfo.entrySize = descsz;
+    //while (1);
 
     //printf("go to kernel 0x%016lx\r\n", (UINT64)entrypoint);
 

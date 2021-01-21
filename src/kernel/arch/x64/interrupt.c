@@ -91,7 +91,7 @@ static void localApicInit(void)
     msrVal = readMsr(MSR_APIC_BASE);
     // base address is at bit 51-12
     apicBase = msrVal & 0x000ffffffffff000ul;
-    printf("LOCAL APIC BASE=0x%016lx\n", apicBase);
+    DEBUG_PRINT("LOCAL APIC BASE=0x%016lx\n", apicBase);
 
 #if 0
     // enable APIC
@@ -132,7 +132,7 @@ static void ioApicInit(void)
 {
     // find the MADT from the ACPI table
     MyOsAcpiMadt *madt = (MyOsAcpiMadt *)findDescriptionTable(ACPI_SDT_MADT_SIG);
-    printf("madt address: 0x%016lx\n", (uint64_t)madt);
+    DEBUG_PRINT("madt address: 0x%016lx\n", (uint64_t)madt);
     if (!madt) {
         panic("madt not found\n");
     }
@@ -143,25 +143,25 @@ static void ioApicInit(void)
     uint64_t i = 0;
     while (i < madt->header.length - sizeof(*madt)) {
         MyOsAcpiMadtEntryHeader *header = (MyOsAcpiMadtEntryHeader *)(madt->data + i);
-        printf("type: %u, length: %u\n", header->entryType, header->recordLength);
+        //printf("type: %u, length: %u\n", header->entryType, header->recordLength);
         if (header->entryType == 1) { // IO APIC
             info = (MyOsAcpiMadtEntryIoApic *)header;
-            printf("I/O APIC ID: %u, Reserved: %u, I/O APIC Address: 0x%08x, Global System Interrupt Base: %u\n",
-                    info->ioApicId,
-                    info->reserved,
-                    info->ioApicAddress,
-                    info->globalSystemInterruptBase);
+            //printf("I/O APIC ID: %u, Reserved: %u, I/O APIC Address: 0x%08x, Global System Interrupt Base: %u\n",
+            //        info->ioApicId,
+            //        info->reserved,
+            //        info->ioApicAddress,
+            //        info->globalSystemInterruptBase);
             //break;
         }
 #if 1
         if (header->entryType == 2) { 
             MyOsAcpiMadtEntryInterruptSourceOverride *entry = 
                 (MyOsAcpiMadtEntryInterruptSourceOverride *)header;
-            printf("bus source: %u, irq source: %u, global system interrupt: 0x%08x, flags: 0x04%x\n",
-                    entry->busSource,
-                    entry->irqSource,
-                    entry->globalSystemInterrupt,
-                    entry->flags);
+            //printf("bus source: %u, irq source: %u, global system interrupt: 0x%08x, flags: 0x04%x\n",
+            //        entry->busSource,
+            //        entry->irqSource,
+            //        entry->globalSystemInterrupt,
+            //        entry->flags);
         }
 #endif
         i += header->recordLength;
@@ -173,7 +173,6 @@ static void ioApicInit(void)
 
     uint32_t ver = 0;
     ver = ioApicReadRegister(ioApicBase, 1);
-    printf("ver=0x%08x\n", ver);
 
     // redirect the keyboard interrupt to Local APIC IRQ0 of the BSP
     // assume the keyboard interrupt is connected to I/O APIC #1
@@ -192,7 +191,6 @@ static const char keymap[] = {
 
 void keyboardInterruptHandlerMain(void)
 {
-    printf("keyboardInterruptHandlerMain()\n");
     uint8_t val = 0;
     do {
         val = in8(0x60);
@@ -205,7 +203,7 @@ void keyboardInterruptHandlerMain(void)
 
 void interruptInit(void)
 {
-    printf("interruptInit()\n");
+    DEBUG_PRINT("%s()\n", __func__);
     disableInterrupts();
     setIdtDescriptors();
     loadIdt();

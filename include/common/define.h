@@ -1,6 +1,8 @@
 #ifndef MYOS_COMMON_DEFINE_H_
 #define MYOS_COMMON_DEFINE_H_
 
+#include <common/types.h>
+
 #define static_assert _Static_assert
 
 #define alloca(size) __builtin_alloca((size))
@@ -11,6 +13,6 @@
 typedef __builtin_va_list va_list;
 
 #define PAGE_SHIFT (12)
-#define PAGE_SIZE (1u << PAGE_SHIFT)
+#define PAGE_SIZE ((size_t)1 << PAGE_SHIFT)
 
 #endif // MYOS_COMMON_DEFINE_H_

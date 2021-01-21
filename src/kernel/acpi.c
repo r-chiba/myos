@@ -3,7 +3,7 @@
 
 MyOsAcpiRsdpDescriptor *gRsdp = NULL;
 
-int isValidAcpiChecksum(const void *data, size_t len)
+MYOS_STATUS isValidAcpiChecksum(const void *data, size_t len)
 {
     uint8_t *p = (const uint8_t *)data;
     uint8_t sum = 0;
@@ -11,38 +11,46 @@ int isValidAcpiChecksum(const void *data, size_t len)
     for (int i = 0; i < len; i++) {
         sum += *(p+i);
     }
-    return sum == 0;
+    return sum == 0 ? MYOS_OK : MYOS_EFORMAT;
 }
 
-static int isValidRsdp(MyOsAcpiRsdpDescriptor *rsdp)
+static MYOS_STATUS isValidRsdp(MyOsAcpiRsdpDescriptor *rsdp)
 {
+    MYOS_STATUS status;
+
     // check the signature
     if (memcmp(rsdp->oldDesc.signature, ACPI_RSDP_SIG, ACPI_RSDP_SIG_LEN) != 0) {
         printf("acpi rsdp magic not matched\n");
-        return 0;
+        return MYOS_EFORMAT;
     }
 
     // check the checksum and extended checksum
-    if (!isValidAcpiChecksum(&rsdp->oldDesc, sizeof(rsdp->oldDesc))) {
+    status = isValidAcpiChecksum(&rsdp->oldDesc, sizeof(rsdp->oldDesc));
+    if (MYOS_ERROR(status)) {
         printf("rsdp checksum not matched\n");
-        return 0;
+        return MYOS_EFORMAT;
     }
-    if (!isValidAcpiChecksum(rsdp, sizeof(*rsdp))) {
+    status = isValidAcpiChecksum(rsdp, sizeof(*rsdp));
+    if (MYOS_ERROR(status)) {
         printf("rsdp extended checksum not matched\n");
-        return 0;
+        return MYOS_EFORMAT;
     }
-    return 1;
+    return MYOS_OK;
 }
 
 MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN])
 {
+    MYOS_STATUS status;
+
     if (!gRsdp) return NULL;
-    if (!isValidRsdp(gRsdp)) {
+    status = isValidRsdp(gRsdp);
+    if (MYOS_ERROR(status)) {
         printf("invalid rsdp\n");
         return NULL;
     }
     MyOsAcpiXsdt *xsdt = (MyOsAcpiXsdt *)gRsdp->xsdtAddress;
-    if (!isValidAcpiChecksum(xsdt, xsdt->header.length)) {
+    status = isValidAcpiChecksum(xsdt, xsdt->header.length);
+    if (MYOS_ERROR(status)) {
         printf("xsdt checksum not matched\n");
         return NULL;
     }
@@ -50,7 +58,10 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
     for (uint32_t i = 0; i < nTables; i++) {
         MyOsAcpiSdtHeader *table = (MyOsAcpiSdtHeader *)xsdt->tables[i];
         if (memcmp(table->signature, signature, ACPI_SDT_SIG_LEN) == 0) {
-            return table;
+            status = isValidAcpiChecksum(table, table->length);
+            if (!MYOS_ERROR(status)) {
+                return table;
+            }
         }
     }
     return NULL;
@@ -58,7 +69,9 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
 
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp)
 {
+    DEBUG_PRINT("%s()\n", __func__);
     KASSERT(rsdp, "no acpi rsdp\n");
-    printf("APIC RSDP addr:0x%016llx\n", (uint64_t)rsdp);
+    DEBUG_PRINT("ACPI RSDP addr:0x%016llx\n", (uint64_t)rsdp);
     gRsdp = rsdp;
 }
+

@@ -2,6 +2,7 @@
 #define MYOS_KERNEL_ACPI_H_
 
 #include <common/types.h>
+#include <status.h>
 
 #define ACPI_RSDP_SIG "RSD PTR "
 #define ACPI_RSDP_SIG_LEN 8
@@ -42,7 +43,7 @@ typedef struct __attribute__((packed)) myos_acpi_xsdt {
 } MyOsAcpiXsdt;
 
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp);
-int isValidAcpiChecksum(const void *data, size_t len);
+MYOS_STATUS isValidAcpiChecksum(const void *data, size_t len);
 MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN]);
 
 #endif // MYOS_KERNEL_ACPI_H_

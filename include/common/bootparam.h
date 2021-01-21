@@ -19,12 +19,12 @@ typedef struct __attribute__((packed)) myos_memory_map_info {
 } MyOsMemoryMapInfo;
 
 // must be same as EFI_MEMORY_DESCRIPTOR
-typedef struct __attribute__((packed)) myos_memory_map_entry{
+typedef struct /*__attribute__((packed))*/ myos_memory_map_entry{
   uint32_t type;
   uint64_t physStart;
   uint64_t virtStart;
   uint64_t nPages;
-  uint64_t attribute;
+  uint64_t attr;
 } MyOsMemoryMapEntry;
 
 typedef struct __attribute__((packed)) myos_boot_parameter {

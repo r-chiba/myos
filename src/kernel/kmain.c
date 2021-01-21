@@ -5,7 +5,8 @@
 #include <acpi.h>
 
 // architecture-specific initialization routine prototype
-void archInit(void);
+void archInit(MyOsBootParameter *bootparam);
+void halt(void);
 
 __attribute__((section(".text.entry")))
 void kmain(MyOsBootParameter *bootparam)
@@ -17,9 +18,9 @@ void kmain(MyOsBootParameter *bootparam)
     // archtecture-specific initialization routines may use ACPI tables
     acpiInit((MyOsAcpiRsdpDescriptor *)bootparam->acpiTableAddr);
 
-    archInit();
+    archInit(bootparam);
 
-    printf("myos kernel initialization done.\n");
+    printf("!!!myos kernel initialization done!!!\n");
     while (1) halt();
 }
 
