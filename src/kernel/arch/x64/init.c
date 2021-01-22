@@ -8,5 +8,6 @@ void archInit(MyOsBootParameter *bootparam)
     gdtInit();
     interruptInit();
     pmemInit(&bootparam->memoryMapInfo);
+    pcpuInit();
 }
 

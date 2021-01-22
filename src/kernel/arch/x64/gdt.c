@@ -1,4 +1,5 @@
 #include <arch/x64/gdt.h>
+#include <arch/x64/pcpu.h>
 #include <util.h>
 
 static const uint64_t gdt[] __attribute__((section(".gdt"))) = {
@@ -28,20 +29,26 @@ static void setSelectors(void)
             "movl   %0, %%eax\n\t"
             "movw   %%ax, %%ds\n\t"
             "movw   %%ax, %%es\n\t"
-            "movw   %%ax, %%fs\n\t"
-            "movw   %%ax, %%gs\n\t"
             // memo: external interrupts and debug exceptions
             //       are disabled after completion of an instruction
             //       immediately following the MOV SS instruction
+            // cf. AMD Architecture Programmer's Manual Vol.2 Section 8.1.4
             // should I care about something?
             "movw   %%ax, %%ss\n\t"
             "nop\n\t"
+
+            // set FS and GS to the null selector
+            // because they are used unlike other selectors
+            // cf. AMD Architecture Programmer's Manual Vol.2 Section 4.5.3
+            "movl   $(0<<3), %%eax\n\t"
+            "movw   %%ax, %%fs\n\t"
+            "movw   %%ax, %%gs\n\t"
 
             "pushq  %1\n\t"
             "movq   $1f, %%rax\n\t"
             "pushq  %%rax\n\t"
             "lretq\n\t"
-            "1:\n\t"
+            "1:"
             :: "i"(KERNEL_DATA_SEGMENT), "i"(KERNEL_TEXT_SEGMENT)
             : "rax");
 }
