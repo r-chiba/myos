@@ -15,4 +15,12 @@ typedef __builtin_va_list va_list;
 #define PAGE_SHIFT (12)
 #define PAGE_SIZE ((size_t)1 << PAGE_SHIFT)
 
+#if defined(KERNEL) && (KERNEL == 1)
+#include <config.h>
+#if !defined(CONFIG_PAGE_SIZE)
+#error inappropriate configration
+#endif
+static_assert(PAGE_SIZE == CONFIG_PAGE_SIZE, "page size mismatch");
+#endif
+
 #endif // MYOS_COMMON_DEFINE_H_

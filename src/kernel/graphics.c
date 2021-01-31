@@ -1,5 +1,6 @@
 #include <graphics.h>
 #include <util.h>
+#include <vmem.h>
 
 static MyOsGraphicsInfo graphicsInfo;
 
@@ -19,6 +20,8 @@ static PixelColor white = { 0xff, 0xff, 0xff, 0x0 };
 void graphicsInit(MyOsGraphicsInfo *bootGraphicsInfo)
 {
     memcpy(&graphicsInfo, bootGraphicsInfo, sizeof(graphicsInfo));
+    graphicsInfo.frameBufferBase = P2V(graphicsInfo.frameBufferBase);
+    memset(graphicsInfo.frameBufferBase, 0, graphicsInfo.frameBufferSize);
 }
 
 static void drawPixel(uint32_t x, uint32_t y, PixelColor *c)

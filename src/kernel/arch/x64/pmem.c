@@ -1,9 +1,10 @@
 #include <arch/x64/pmem.h>
+#include <vmem.h>
 #include <status.h>
 
 extern char _kernel_start[], _kernel_end[];
 
-MyOsPageFrame *pages;
+MyOsPageFrame *pages; // list of all available page-frames
 uint64_t nAvailPages;
 MyOsBuddyFreeList freeLists[ZONE_NUM][BUDDY_MAX_ORDER+1];
 
@@ -70,7 +71,7 @@ static MYOS_STATUS pageInit(const MyOsMemoryMapInfo *info)
         MyOsMemoryMapEntry *entry = (MyOsMemoryMapEntry *)(map + i * info->entrySize);
         if (isUsableMemoryRegion(entry) && mgmtPages <= entry->nPages) {
             entry->nPages -= mgmtPages;
-            pages = (MyOsPageFrame *)(entry->physStart + entry->nPages*PAGE_SIZE);
+            pages = (MyOsPageFrame *)P2V(entry->physStart + entry->nPages*PAGE_SIZE);
             break;
         }
     }

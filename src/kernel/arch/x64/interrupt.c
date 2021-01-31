@@ -4,6 +4,7 @@
 #include <arch/x64/constant.h>
 #include <arch/x64/gdt.h>
 #include <util.h>
+#include <vmem.h>
 
 static MyOsIdtGateDescriptor idt[NINTDESCS] __attribute__((section(".idt"))) = {0};
 
@@ -90,7 +91,7 @@ static void localApicInit(void)
     // size of register space is 4 KiB?
     msrVal = readMsr(MSR_APIC_BASE);
     // base address is at bit 51-12
-    apicBase = msrVal & 0x000ffffffffff000ul;
+    apicBase = P2V(msrVal & 0x000ffffffffff000ul);
     DEBUG_PRINT("LOCAL APIC BASE=0x%016lx\n", apicBase);
 
 #if 0
@@ -169,7 +170,7 @@ static void ioApicInit(void)
     if (!info) {
         panic("io apic not found\n");
     }
-    uint64_t ioApicBase = info->ioApicAddress;
+    uint64_t ioApicBase = P2V(info->ioApicAddress);
 
     uint32_t ver = 0;
     ver = ioApicReadRegister(ioApicBase, 1);

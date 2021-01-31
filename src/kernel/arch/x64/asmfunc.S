@@ -1,4 +1,20 @@
+#include <config.h>
 #include <arch/x64/asm.h>
+
+    .section .text.entry
+.extern kmain
+/*
+ * void kentry(MyOsBootParameter *bootparam);
+ * kernel entry point
+ * arguments:
+ *  %rdi: bootparam
+ */
+ASMFUNC_START(kentry)
+    /* assume that the pointer to kernel page table is at the front of bootparam */
+    movq    (%rdi), %rax
+    movq    %rax, %cr3
+    callq   kmain
+ASMFUNC_END(kentry)
 
     .text
 

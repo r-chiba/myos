@@ -7,6 +7,8 @@
 #include <Guid/Acpi.h>
 #include <common/bootparam.h>
 #include <common/util.h>
+#include <kernel/config.h>
+#include <arch/x64/vmem.h>
 
 static_assert(sizeof(INT8) == sizeof(int8_t), "type mismatch\r\n");
 static_assert(sizeof(INT16) == sizeof(int16_t), "type mismatch\r\n");
@@ -19,7 +21,10 @@ static_assert(sizeof(UINT32) == sizeof(uint32_t), "type mismatch\r\n");
 static_assert(sizeof(UINTN) == sizeof(uint64_t), "type mismatch\r\n");
 static_assert(sizeof(MyOsMemoryMapEntry) == sizeof(EFI_MEMORY_DESCRIPTOR),
                 "struct mismatch");
+static_assert(CONFIG_PAGE_SIZE == EFI_PAGE_SIZE, "page size mismatch");
+
 EFI_STATUS loadElf(const UINT8 *file, UINT64 *entrypoint);
+EFI_STATUS vmemInit(MyOsBootParameter *bootparam);
 
 #define LOAD_ELF 0
 #if LOAD_ELF
@@ -39,6 +44,8 @@ static EFI_GUID efiDevicePathToTextProtocolGuid = EFI_DEVICE_PATH_TO_TEXT_PROTOC
 static EFI_GUID efiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
 static EFI_GUID efiAcpiTableGuid = EFI_ACPI_TABLE_GUID;
 
+#define FONT_HEIGHT 16
+#define FONT_WIDTH 8
 extern const uint8_t font[0x100][16];
 
 typedef void (*MyOsKernelEntryPoint)(MyOsBootParameter *);
@@ -70,6 +77,7 @@ void drawPixel(
     p->Red = c.Red;
     p->Reserved = c.Reserved;
 }
+
 static EFI_GRAPHICS_OUTPUT_BLT_PIXEL black = { 0x0, 0x0, 0x0, 0x0 };
 static EFI_GRAPHICS_OUTPUT_BLT_PIXEL white = { 0xff, 0xff, 0xff, 0x0 };
 
@@ -78,8 +86,6 @@ void myPutChar(
     UINT32 y,
     int c)
 {
-#define FONT_HEIGHT 16
-#define FONT_WIDTH 8
     if (c >= 0xff) return;
     for (int i = 0; i < FONT_HEIGHT; i++) {
         for (int j = 0; j < FONT_WIDTH; j++) {
@@ -246,6 +252,7 @@ EFI_STATUS EFIAPI UefiMain(
         while (1);
         return EFI_OUT_OF_RESOURCES;
     }
+    printf("kernel size: %llu\n", ksz);
 
 #if LOAD_ELF
     printf("magic: 0x%x %c %c %c, kernel size: %lu\r\n",
@@ -260,15 +267,16 @@ EFI_STATUS EFIAPI UefiMain(
     entrypoint = (MyOsKernelEntryPoint)entrypointAddr;
 #else
     {
-        UINTN nPages = ROUNDUP(ksz, PAGE_SIZE) >> PAGE_SHIFT;
-        EFI_PHYSICAL_ADDRESS mem = 0x10000;
+        UINTN nPages = ROUNDUP(ksz, EFI_PAGE_SIZE) >> PAGE_SHIFT;
+        EFI_PHYSICAL_ADDRESS mem = CONFIG_KERNEL_PBASE;
         status = BS->AllocatePages(AllocateAddress, EfiLoaderData, nPages, &mem);
         if (EFI_ERROR(status)) {
             printf("can't place the kernel to 0x%016llx\r\n", (UINT64)mem);
+            while (1);
             return EFI_OUT_OF_RESOURCES;
         }
         memcpy(mem, kernel, ksz);
-        // assume the entrypoint is at beginning of the image
+        // assume the entrypoint is at the front of the image
         entrypoint = (MyOsKernelEntryPoint)mem;
     }
 #endif
@@ -300,7 +308,8 @@ EFI_STATUS EFIAPI UefiMain(
         return EFI_OUT_OF_RESOURCES;
     }
 
-    CO->ClearScreen(CO);
+    vmemInit(bootparam);
+
     do {
         while (1) {
             status = BS->GetMemoryMap(&mapsz, map, &mapkey, &descsz, &descver);
@@ -309,44 +318,32 @@ EFI_STATUS EFIAPI UefiMain(
                 if (map) BS->FreePool(map);
                 status = BS->AllocatePool(EfiLoaderData, mapsz, (void **)&map);
                 if (EFI_ERROR(status)) {
-                    while (1);
                     return EFI_OUT_OF_RESOURCES;
                 }
             } else if (EFI_ERROR(status)) {
-                while (1);
                 return EFI_OUT_OF_RESOURCES;
             }
         }
-#if 0
-        UINTN ndescs = mapsz / descsz;
-        for (UINTN i = 0; i < ndescs; i++) {
-            EFI_MEMORY_DESCRIPTOR *desc =
-                (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)map + i*descsz);
-            printf("%08x %016lx %016lx %016x %016x\r\n",
-                    desc->Type,
-                    desc->PhysicalStart,
-                    desc->VirtualStart,
-                    desc->NumberOfPages,
-                    desc->Attribute);
-        }
-        //while (1);
-#endif
         status = BS->ExitBootServices(ImageHandle, mapkey);
     } while (EFI_ERROR(status));
 
     bootparam->memoryMapInfo.mapBase = (UINT64)map;
     bootparam->memoryMapInfo.mapSize = mapsz;
     bootparam->memoryMapInfo.entrySize = descsz;
-    //while (1);
 
-    //printf("go to kernel 0x%016lx\r\n", (UINT64)entrypoint);
+    printf("go to kernel 0x%016lx 0x%016lx 0x%016lx\r\n",
+            (UINT64)entrypoint,
+            (UINT64)bootparam,
+            (UINT64)bootparam->vmemInfo.archInfo);
+    //while (1);
 
     // call MyOS kernel entrypoint in accordance with System V ABI
     // TODO: prepare a kernel stack for the BSP
     __asm__ __volatile__ (
-            "call *%1\n\t"
-            :: "D"(bootparam), "r"(entrypoint)
-            : "cc", "memory");
+            "mfence\n\t"
+            "call *%0"
+            :: "r"(entrypoint), "D"(bootparam)
+            : "memory");
 
     // not come here
     printf("return from kernel\r\n");

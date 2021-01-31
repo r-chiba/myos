@@ -19,7 +19,7 @@ typedef struct __attribute__((packed)) myos_memory_map_info {
 } MyOsMemoryMapInfo;
 
 // must be same as EFI_MEMORY_DESCRIPTOR
-typedef struct /*__attribute__((packed))*/ myos_memory_map_entry{
+typedef struct /*__attribute__((packed))*/ myos_memory_map_entry {
   uint32_t type;
   uint64_t physStart;
   uint64_t virtStart;
@@ -27,10 +27,15 @@ typedef struct /*__attribute__((packed))*/ myos_memory_map_entry{
   uint64_t attr;
 } MyOsMemoryMapEntry;
 
+typedef struct __attribute__((packed)) myos_vmem_info {
+    void *archInfo; // pointer to an architecture-dependent structure
+} MyOsVmemInfo;
+
 typedef struct __attribute__((packed)) myos_boot_parameter {
+    MyOsVmemInfo vmemInfo;
     uint64_t kernelLoadAddr;
     uint64_t kernelSize;
-    uint64_t acpiTableAddr; // address of ACPI Root System Description Pointer
+    uint64_t acpiTableAddr; // address of the ACPI Root System Description Pointer
     MyOsGraphicsInfo graphicsInfo;
     MyOsMemoryMapInfo memoryMapInfo;
 } MyOsBootParameter;

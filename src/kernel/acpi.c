@@ -1,5 +1,6 @@
 #include <acpi.h>
 #include <util.h>
+#include <vmem.h>
 
 MyOsAcpiRsdpDescriptor *gRsdp = NULL;
 
@@ -48,7 +49,7 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
         printf("invalid rsdp\n");
         return NULL;
     }
-    MyOsAcpiXsdt *xsdt = (MyOsAcpiXsdt *)gRsdp->xsdtAddress;
+    MyOsAcpiXsdt *xsdt = (MyOsAcpiXsdt *)P2V(gRsdp->xsdtAddress);
     status = isValidAcpiChecksum(xsdt, xsdt->header.length);
     if (MYOS_ERROR(status)) {
         printf("xsdt checksum not matched\n");
@@ -56,7 +57,7 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
     }
     uint32_t nTables = (xsdt->header.length - sizeof(*xsdt)) / sizeof(uint64_t);
     for (uint32_t i = 0; i < nTables; i++) {
-        MyOsAcpiSdtHeader *table = (MyOsAcpiSdtHeader *)xsdt->tables[i];
+        MyOsAcpiSdtHeader *table = (MyOsAcpiSdtHeader *)P2V(xsdt->tables[i]);
         if (memcmp(table->signature, signature, ACPI_SDT_SIG_LEN) == 0) {
             status = isValidAcpiChecksum(table, table->length);
             if (!MYOS_ERROR(status)) {
@@ -69,6 +70,7 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
 
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp)
 {
+    rsdp = P2V(rsdp);
     DEBUG_PRINT("%s()\n", __func__);
     KASSERT(rsdp, "no acpi rsdp\n");
     DEBUG_PRINT("ACPI RSDP addr:0x%016llx\n", (uint64_t)rsdp);
