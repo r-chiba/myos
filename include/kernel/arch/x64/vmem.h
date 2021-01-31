@@ -27,7 +27,7 @@ typedef uint64_t MyOsX64PageTableEntry;
 #define PTE_FLAGS_BIT_G     ((MyOsX64PageTableEntry)1 << 8) /* Global */
 
 // See Intel SDM Vol. 3A Sec. 4.5 Table 4-19
-#define PDE_FLAGS_BIT_PS    (1u << 7) /* Page size */
+#define PDE_FLAGS_BIT_PS    ((MyOsX64PageTableEntry)1 << 7) /* Page size */
 
 #define PML4IDX_SHIFT 39
 #define PDPTIDX_SHIFT 30
