@@ -70,9 +70,9 @@ MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN
 
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp)
 {
-    rsdp = P2V(rsdp);
     DEBUG_PRINT("%s()\n", __func__);
     KASSERT(rsdp, "no acpi rsdp\n");
+    rsdp = P2V(rsdp);
     DEBUG_PRINT("ACPI RSDP addr:0x%016llx\n", (uint64_t)rsdp);
     gRsdp = rsdp;
 }
