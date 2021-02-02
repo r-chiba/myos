@@ -12,4 +12,6 @@ do { \
     } \
 } while (0)
 
+#define offsetof(s,m) (size_t)&(((s *)NULL)->m)
+
 #endif // MYOS_KERNEL_UTIL_H_

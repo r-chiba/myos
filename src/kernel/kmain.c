@@ -4,6 +4,7 @@
 #include <graphics.h>
 #include <acpi.h>
 #include <vmem.h>
+#include <timer.h>
 
 // architecture-specific initialization routine prototype
 void archInit(MyOsBootParameter *bootparam);
@@ -23,6 +24,8 @@ void kmain(MyOsBootParameter *bootparam)
     acpiInit((MyOsAcpiRsdpDescriptor *)bootparam->acpiTableAddr);
 
     archInit(bootparam);
+
+    timerInit();
 
     printf("!!!myos kernel initialization done!!!\n");
     while (1) halt();

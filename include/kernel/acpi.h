@@ -42,6 +42,14 @@ typedef struct __attribute__((packed)) myos_acpi_xsdt {
     uint64_t tables[];
 } MyOsAcpiXsdt;
 
+typedef struct __attribute__((packed)) myos_acpi_generic_address {
+    uint8_t addressSpaceId;
+    uint8_t registerBitWidth;
+    uint8_t registerBitOffset;
+    uint8_t accessSize;
+    uint64_t address;
+} MyOsAcpiGenericAddress;
+
 void acpiInit(MyOsAcpiRsdpDescriptor *rsdp);
 MYOS_STATUS isValidAcpiChecksum(const void *data, size_t len);
 MyOsAcpiSdtHeader *findDescriptionTable(const uint8_t signature[ACPI_SDT_SIG_LEN]);
