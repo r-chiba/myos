@@ -44,13 +44,6 @@ void wakeupAp(uint8_t dest, paddr_t entry)
         panic("no available memory for trampline");
     }
 
-#if 0
-    __asm__ __volatile("templabel:");
-    int x = 1;
-    volatile int *tmp = &x;
-    while (*tmp == 1) ;
-    __asm__ __volatile("templabel2:");
-#endif
     uint64_t cur = nAwakedCpus;
     localApicSendIpi(
         0,
@@ -94,7 +87,7 @@ void mpInit(void)
     DEBUG_PRINT("%s()\n", __func__);
 
     // nCpus and cpuInfo are initialized in the Local APIC initialization routine
-    if (nCpus == 0) return;
+    if (nCpus <= 1) return;
 
     // copy the trampoline code and data to a page below 1MiB
     paddr_t entry = buddyAllocRegion(ZONE_LEGACY, 0);
