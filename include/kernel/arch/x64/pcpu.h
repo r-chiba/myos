@@ -2,8 +2,7 @@
 #define MYOS_KERNEL_ARCH_X64_PCPU_H_
 
 #include <common/types.h>
-
-#define MAXCPUNUM 128
+#include <arch/x64/mp.h>
 
 typedef struct __attribute__((packed)) myos_per_cpu_data {
     uint64_t id;

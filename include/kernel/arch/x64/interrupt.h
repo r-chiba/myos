@@ -108,12 +108,43 @@ typedef struct __attribute__((packed)) myos_acpi_madt_entry_local_apic_address_o
     uint64_t localApicPhysAddr;
 } MyOsAcpiMadtEntryLocalApicAddressOverride;
 
+#define LAPIC_IDR_OFFSET        0x020
+#define LAPIC_ICR_LOW_OFFSET    0x300
+#define LAPIC_ICR_HIGH_OFFSET   0x310
+
+#define LAPIC_IPI_DELIVERY_MODE_NORMAL            0u
+#define LAPIC_IPI_DELIVERY_MODE_LOWEST_PRIORITY   1u
+#define LAPIC_IPI_DELIVERY_MODE_SMI               2u
+#define LAPIC_IPI_DELIVERY_MODE_NMI               4u
+#define LAPIC_IPI_DELIVERY_MODE_INIT              5u
+#define LAPIC_IPI_DELIVERY_MODE_STARTUP           6u
+
+#define LAPIC_IPI_LEVEL_DEASSERT    0u
+#define LAPIC_IPI_LEVEL_ASSERT      1u
+
+#define LAPIC_IPI_TRIGGER_MODE_EDGE     0u
+#define LAPIC_IPI_TRIGGER_MODE_LEVEL    1u
+
+#define LAPIC_IPI_DEST_SHORTHAND_NO             0u
+#define LAPIC_IPI_DEST_SHORTHAND_SELF           1u
+#define LAPIC_IPI_DEST_SHORTHAND_ALL            2u
+#define LAPIC_IPI_DEST_SHORTHAND_ALL_EX_SELF    3u
+
 #define IOAPIC_IOREGSEL_OFFSET 0
 #define IOAPIC_IOWIN_OFFSET 0x10
 #define IOAPIC_IOREDTBL_LOW_OFFSET(n) (0x10+2*(n))
 #define IOAPIC_IOREDTBL_HIGH_OFFSET(n) (0x10+2*(n)+1)
 
 void interruptInit(void);
+int amIBsp(void);
+uint8_t getLocalApicId(void);
+void localApicSendIpi(
+        uint8_t vector,
+        uint8_t deliveryMode,
+        uint8_t level,
+        uint8_t triggerMode,
+        uint8_t destShorthand,
+        uint8_t dest);
 
 void defaultInterruptHandler(void);
 void keyboardInterruptHandler(void);

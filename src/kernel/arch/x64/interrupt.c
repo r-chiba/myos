@@ -3,6 +3,7 @@
 #include <arch/x64/asminline.h>
 #include <arch/x64/constant.h>
 #include <arch/x64/gdt.h>
+#include <arch/x64/mp.h>
 #include <util.h>
 #include <vmem.h>
 
@@ -12,6 +13,11 @@ static MyOsDescriptorRegister idtr = {
     sizeof(idt)-1,
     (uint64_t)&idt
 };
+
+MyOsAcpiMadt *madt = NULL;
+
+extern uint64_t nCpus;
+extern MyOsCpuInfo cpuInfo[MAXCPUNUM];
 
 static void setIdtDescriptor(
     MyOsIdtGateDescriptor *desc,
@@ -56,6 +62,7 @@ static void setIdtDescriptors(void)
         0);
 }
 
+__attribute__((always_inline))
 static void loadIdt(void)
 {
     __asm__ __volatile__ (
@@ -73,10 +80,35 @@ static void disableLegacyPic(void)
     out8(0x21, 0xfb);
 }
 
+static void findMadt(void)
+{
+    // find the MADT from the ACPI table
+    madt = (MyOsAcpiMadt *)findDescriptionTable(ACPI_SDT_MADT_SIG);
+    DEBUG_PRINT("madt address: 0x%016lx\n", (uint64_t)madt);
+    if (!madt) {
+        panic("madt not found\n");
+    }
+}
+
+__attribute__((always_inline))
+static vaddr_t getLocalApicBaseAddr(void)
+{
+    uint64_t msrVal = readMsr(MSR_APIC_BASE);
+    // base address is at bit 51-12
+    return P2V(msrVal & 0x000ffffffffff000ul);
+}
+
+__attribute__((always_inline))
+int amIBsp(void)
+{
+    uint64_t msrVal = readMsr(MSR_APIC_BASE);
+    return !!(msrVal & (1<<8));
+}
+
 static void localApicInit(void)
 {
     uint32_t eax, ebx, ecx, edx;
-    uint64_t msrVal, apicBase;
+    vaddr_t apicBase;
     volatile uint32_t *svrAddr;
     uint32_t svrVal;
 
@@ -84,14 +116,17 @@ static void localApicInit(void)
     cpuid(0x1, &eax, &ebx, &ecx, &edx);
     KASSERT(edx & CPUID_FEATURE_EDX_APIC, "APIC unsupported\n");
 
-    disableLegacyPic();
+    if (amIBsp()) disableLegacyPic();
 
     // get the base address of Local APIC register space
     // TODO: must map the register space as UC (cache-disable) memory
     // size of register space is 4 KiB?
-    msrVal = readMsr(MSR_APIC_BASE);
+#if 0
+    uint64_t msrVal = readMsr(MSR_APIC_BASE);
     // base address is at bit 51-12
     apicBase = P2V(msrVal & 0x000ffffffffff000ul);
+#endif
+    apicBase = getLocalApicBaseAddr();
     DEBUG_PRINT("LOCAL APIC BASE=0x%016lx\n", apicBase);
 
 #if 0
@@ -107,6 +142,71 @@ static void localApicInit(void)
     svrVal = *svrAddr;
     svrVal |= (1 << 8);
     *svrAddr = svrVal;
+
+    // find all processors
+    if (amIBsp()) {
+        uint64_t i = 0;
+        while (i < madt->header.length - sizeof(*madt)) {
+            MyOsAcpiMadtEntryHeader *header = (MyOsAcpiMadtEntryHeader *)(madt->data + i);
+            //printf("type: %u, length: %u\n", header->entryType, header->recordLength);
+            if (header->entryType == 0) { // Local APIC
+                MyOsAcpiMadtEntryLocalApic *entry =
+                    (MyOsAcpiMadtEntryLocalApic *)header;
+#if 0
+                printf("ACPI Processor ID: %u, APIC ID: %u, Flags: 0x%08x\n",
+                        entry->acpiProcessorId,
+                        entry->apicId,
+                        entry->flags);
+#endif
+                if ((entry->flags & (1u<<0))
+                    || (!(entry->flags & (1u<<0)) && (entry->flags * (1u<<1)))) {
+                    // the processor is able to be enabled
+                    memset(&cpuInfo[nCpus], 0, sizeof(cpuInfo[nCpus]));
+                    cpuInfo[nCpus].acpiProcessorId = entry->acpiProcessorId;
+                    cpuInfo[nCpus].localApicId = entry->apicId;
+                    nCpus++;
+                }
+            }
+            i += header->recordLength;
+        }
+        DEBUG_PRINT("available CPUs: %u\n", nCpus);
+    }
+}
+
+uint8_t getLocalApicId(void)
+{
+    vaddr_t apicBase = getLocalApicBaseAddr();
+    uint32_t idr = *(volatile uint32_t *)(apicBase + LAPIC_IDR_OFFSET);
+    return (uint8_t)(idr >> 24);
+}
+
+void localApicSendIpi(
+        uint8_t vector,
+        uint8_t deliveryMode,
+        uint8_t level,
+        uint8_t triggerMode,
+        uint8_t destShorthand,
+        uint8_t dest)
+{
+    uint32_t icrLow = 0, icrHigh = 0;
+    vaddr_t apicBase = getLocalApicBaseAddr();
+
+    icrLow |= vector;
+    icrLow |= ((deliveryMode & 0x07u) << 8);
+    icrLow |= ((level & 0x01u) << 14);
+    icrLow |= ((triggerMode & 0x01u) << 15);
+    icrLow |= ((destShorthand & 0x03u) << 18);
+
+    icrHigh |= (dest << 24);
+
+    // write to ICR high at first because an IPI is issued when the ICR low is written
+    *(volatile uint32_t *)(apicBase + LAPIC_ICR_HIGH_OFFSET) = icrHigh;
+    *(volatile uint32_t *)(apicBase + LAPIC_ICR_LOW_OFFSET) = icrLow;
+
+    // wait until the IPI is accepted
+    do {
+        icrLow = *(volatile uint32_t *)(apicBase + LAPIC_ICR_LOW_OFFSET);
+    } while (icrLow & (1u<<12));
 }
 
 static uint32_t ioApicReadRegister(uint64_t ioApicBase, uint32_t reg)
@@ -131,13 +231,6 @@ static void ioApicWriteRegister(uint64_t ioApicBase, uint32_t reg, uint32_t val)
 
 static void ioApicInit(void)
 {
-    // find the MADT from the ACPI table
-    MyOsAcpiMadt *madt = (MyOsAcpiMadt *)findDescriptionTable(ACPI_SDT_MADT_SIG);
-    DEBUG_PRINT("madt address: 0x%016lx\n", (uint64_t)madt);
-    if (!madt) {
-        panic("madt not found\n");
-    }
-
     // find I/O APIC information from the MADT
     // should I consider multiple I/O APIC case?
     MyOsAcpiMadtEntryIoApic *info = NULL;
@@ -147,22 +240,24 @@ static void ioApicInit(void)
         //printf("type: %u, length: %u\n", header->entryType, header->recordLength);
         if (header->entryType == 1) { // IO APIC
             info = (MyOsAcpiMadtEntryIoApic *)header;
-            //printf("I/O APIC ID: %u, Reserved: %u, I/O APIC Address: 0x%08x, Global System Interrupt Base: %u\n",
-            //        info->ioApicId,
-            //        info->reserved,
-            //        info->ioApicAddress,
-            //        info->globalSystemInterruptBase);
-            //break;
+#if 0
+            printf("I/O APIC ID: %u, Reserved: %u, I/O APIC Address: 0x%08x, Global System Interrupt Base: %u\n",
+                    info->ioApicId,
+                    info->reserved,
+                    info->ioApicAddress,
+                    info->globalSystemInterruptBase);
+            break;
+#endif
         }
-#if 1
+#if 0
         if (header->entryType == 2) { 
             MyOsAcpiMadtEntryInterruptSourceOverride *entry = 
                 (MyOsAcpiMadtEntryInterruptSourceOverride *)header;
-            //printf("bus source: %u, irq source: %u, global system interrupt: 0x%08x, flags: 0x04%x\n",
-            //        entry->busSource,
-            //        entry->irqSource,
-            //        entry->globalSystemInterrupt,
-            //        entry->flags);
+            printf("bus source: %u, irq source: %u, global system interrupt: 0x%08x, flags: 0x04%x\n",
+                    entry->busSource,
+                    entry->irqSource,
+                    entry->globalSystemInterrupt,
+                    entry->flags);
         }
 #endif
         i += header->recordLength;
@@ -206,10 +301,13 @@ void interruptInit(void)
 {
     DEBUG_PRINT("%s()\n", __func__);
     disableInterrupts();
-    setIdtDescriptors();
-    loadIdt();
+    if (amIBsp()) findMadt();
     localApicInit();
-    ioApicInit();
+    if (amIBsp()) {
+        ioApicInit();
+        setIdtDescriptors();
+    }
+    loadIdt();
     enableInterrupts();
 }
 

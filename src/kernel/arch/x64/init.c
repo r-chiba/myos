@@ -12,3 +12,9 @@ void archInit(MyOsBootParameter *bootparam)
     pcpuInit();
 }
 
+void archInitForAp(void)
+{
+    gdtInit();
+    interruptInit();
+    pcpuInit();
+}

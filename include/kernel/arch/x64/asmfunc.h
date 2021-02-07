@@ -2,7 +2,10 @@
 #define MYOS_KERNEL_ARCH_X64_ASMFUNC_H_
 
 #include <common/types.h>
+#include <common/bootparam.h>
 
+void kentry(MyOsBootParameter *bootparam);
+void kentryForAp(void);
 void halt(void);
 void disableInterrupts(void);
 void enableInterrupts(void);

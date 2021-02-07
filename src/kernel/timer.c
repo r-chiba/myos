@@ -60,7 +60,7 @@ static void hpetInit(void)
     // find the HPET description table from the ACPI table
     MyOsHpetDescriptor *hpet =
         (MyOsHpetDescriptor *)findDescriptionTable(ACPI_SDT_HPET_SIG);
-    DEBUG_PRINT("hpet table address: 0x%016lx\n", (uint64_t)hpet);
+    //DEBUG_PRINT("hpet table address: 0x%016lx\n", (uint64_t)hpet);
     if (!hpet) {
         panic("hpet table not found\n");
     }
@@ -81,7 +81,9 @@ void usleepBusy(uint64_t us)
     uint64_t target = cur + US_TO_TICK(us);
     int isEnabled = enableHpet();
 
-    while (readHpetRegister(HPET_MCVR_OFFSET) < target) ;
+    while (readHpetRegister(HPET_MCVR_OFFSET) < target) {
+        __asm__ __volatile__("pause");
+    }
     if (!isEnabled) disableHpet();
 }
 
@@ -91,7 +93,9 @@ void timerInit(void)
 
     hpetInit();
 
+#if 0
     printf("timer test\n");
     usleepBusy(5000000);
     printf("5sec elapsed\n");
+#endif
 }

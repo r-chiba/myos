@@ -5,7 +5,7 @@
 .extern kmain
 /*
  * void kentry(MyOsBootParameter *bootparam);
- * kernel entry point
+ * kernel entry point for BSP
  * arguments:
  *  %rdi: bootparam
  */
@@ -13,6 +13,16 @@ ASMFUNC_START(kentry)
     /* assume that the pointer to kernel page table is at the front of bootparam */
     movq    (%rdi), %rax
     movq    %rax, %cr3
+    callq   kmain
+ASMFUNC_END(kentry)
+
+/*
+ * void kentryForAp(void);
+ * kernel entry point for AP
+ */
+ASMFUNC_START(kentryForAp)
+    /* assume that an page table is already set by the trampoline code */
+    movq    $0, %rdi
     callq   kmain
 ASMFUNC_END(kentry)
 

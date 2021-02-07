@@ -22,13 +22,22 @@ static int isUsableMemoryRegion(const MyOsMemoryMapEntry *entry)
 
 static MyOsMemoryZone getZone(paddr_t start, paddr_t end, paddr_t *border)
 {
+#define ZONE_LEGACY_BORDER (1lu << 20)
 #define ZONE_DMA_BORDER (16lu << 20)
-    if (end - 1< ZONE_DMA_BORDER) {
+    if (end - 1 < ZONE_LEGACY_BORDER) {
+        return ZONE_LEGACY;
+    } else if (start >= ZONE_LEGACY_BORDER && end - 1 < ZONE_DMA_BORDER) {
         return ZONE_DMA;
     } else if (start >= ZONE_DMA_BORDER) {
         return ZONE_NORMAL;
     }
-    if (border) *border = ZONE_DMA_BORDER;
+    if (border) {
+        if (start < ZONE_LEGACY_BORDER) {
+            *border = ZONE_LEGACY_BORDER;
+        } else {
+            *border = ZONE_DMA_BORDER;
+        }
+    }
     return ZONE_NUM;
 }
 
@@ -49,7 +58,7 @@ static MYOS_STATUS pageInit(const MyOsMemoryMapInfo *info)
         //        entry->virtStart,
         //        entry->nPages,
         //        entry->attr);
-        if (entry->physStart+entry->nPages*PAGE_SIZE-1 < 16<<20
+        if (entry->physStart+entry->nPages*PAGE_SIZE-1 < 1<<20
             //&& isUsableMemoryRegion(entry)
             ) {
             DEBUG_PRINT("%08x %016lx-%016lx %016lx\r\n",
@@ -118,7 +127,7 @@ static MyOsPageFrame *getPageFrameFromAddr(paddr_t paddr)
 // assume [start, end) is in one memory zone
 static void buddyAddRegion(paddr_t start, paddr_t end, MyOsMemoryZone zone, int order)
 {
-    if ((zone < ZONE_DMA || zone >= ZONE_NUM)
+    if ((zone < 0 || zone >= ZONE_NUM)
         || (order < 0 || order > BUDDY_MAX_ORDER)) {
         DEBUG_PRINT("[%lx-%lx], %d, %d\n", start, end, zone, order);
         return;
@@ -148,7 +157,7 @@ static void buddyAddRegion(paddr_t start, paddr_t end, MyOsMemoryZone zone, int 
 // by splitting a region in a higher-order list
 static void buddyPrepareRegion(MyOsMemoryZone zone, int order)
 {
-    if ((zone < ZONE_DMA || zone >= ZONE_NUM)
+    if ((zone < 0 || zone >= ZONE_NUM)
         || (order < 0 || order > BUDDY_MAX_ORDER)) {
         DEBUG_PRINT("%d, %d\n", zone, order);
         return;
@@ -176,7 +185,7 @@ static void buddyPrepareRegion(MyOsMemoryZone zone, int order)
 
 paddr_t buddyAllocRegion(MyOsMemoryZone zone, int order)
 {
-    if (order > BUDDY_MAX_ORDER) return (paddr_t)NULL;
+    if (order < 0 || order > BUDDY_MAX_ORDER) return (paddr_t)NULL;
     buddyPrepareRegion(zone, order);
     MyOsBuddyFreeList *fl = &freeLists[zone][order];
     MyOsPageFrame *p = SLIST_FIRST(&fl->head);
@@ -261,7 +270,7 @@ static void buddyInit(const MyOsMemoryMapInfo *info)
 #if 1
     // confirm all available memory is managed by buddy-system
     uint64_t avail = 0;
-    for (MyOsMemoryZone zone = ZONE_DMA; zone < ZONE_NUM; zone++) {
+    for (MyOsMemoryZone zone = 0; zone < ZONE_NUM; zone++) {
         for (int order = 0; order <= BUDDY_MAX_ORDER; order++) {
             uint64_t n = 0;
             MyOsPageFrame *p;
@@ -283,7 +292,7 @@ static void buddyTest(void)
     paddr_t buf = buddyAllocRegion(ZONE_NORMAL, 11);
     paddr_t buf2 = buddyAllocRegion(ZONE_NORMAL, 11);
     DEBUG_PRINT("buf=%p, buf2=%p\n", buf, buf2);
-    for (MyOsMemoryZone zone = ZONE_DMA; zone < ZONE_NUM; zone++) {
+    for (MyOsMemoryZone zone = 0; zone < ZONE_NUM; zone++) {
         for (int order = 11; order <= BUDDY_MAX_ORDER; order++) {
             uint64_t n = 0;
             MyOsPageFrame *p;
@@ -295,7 +304,7 @@ static void buddyTest(void)
     }
     if (buf) buddyFreeRegion(buf, 11);
     if (buf2) buddyFreeRegion(buf2, 11);
-    for (MyOsMemoryZone zone = ZONE_DMA; zone < ZONE_NUM; zone++) {
+    for (MyOsMemoryZone zone = 0; zone < ZONE_NUM; zone++) {
         for (int order = 11; order <= BUDDY_MAX_ORDER; order++) {
             uint64_t n = 0;
             MyOsPageFrame *p;
@@ -305,6 +314,9 @@ static void buddyTest(void)
             if (zone == ZONE_NORMAL) DEBUG_PRINT("%d %d: %lu\n", zone, order, n);
         }
     }
+    buf = buddyAllocRegion(ZONE_LEGACY, 0);
+    buf2 = buddyAllocRegion(ZONE_LEGACY, 0);
+    DEBUG_PRINT("buf=%p, buf2=%p\n", buf, buf2);
 }
 
 void pmemInit(MyOsMemoryMapInfo *mapInfo)

@@ -39,8 +39,9 @@ typedef struct myos_buddy_free_list {
 } MyOsBuddyFreeList;
 
 typedef enum {
-    ZONE_DMA = 0,   // a zone for memory below 16 MiB (used for legacy-device DMA)
-    ZONE_NORMAL,    // a zone for memory not belonging to other zones
+    ZONE_LEGACY = 0,    // a zone for memory below 1 MiB (used for 16-bit code)
+    ZONE_DMA,           // a zone for memory below 16 MiB (used for legacy-device DMA)
+    ZONE_NORMAL,        // a zone for memory not belonging to other zones
     ZONE_NUM
 } MyOsMemoryZone;
 

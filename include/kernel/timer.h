@@ -5,7 +5,7 @@
 #include <status.h>
 #include <acpi.h>
 
-// signature of the ACPI Multiple APIC Description Table
+// signature of the ACPI HPET Description Table
 #define ACPI_SDT_HPET_SIG "HPET"
 
 #define HPET_GCIDR_OFFSET       0x00
@@ -26,5 +26,6 @@ typedef struct __attribute__((packed)) myos_hpet_descriptor {
 
 
 void timerInit(void);
+void usleepBusy(uint64_t us);
 
 #endif // MYOS_KERNEL_ACPI_H_

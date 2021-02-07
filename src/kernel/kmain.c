@@ -8,26 +8,38 @@
 
 // architecture-specific initialization routine prototype
 void archInit(MyOsBootParameter *bootparam);
+void archInitForAp(void);
+void mpInit(void);
+uint8_t getLocalApicId(void);
 void halt(void);
 extern char _kernel_start[], _kernel_end[];
+extern uint64_t nAwakedCpus;
 
 void kmain(MyOsBootParameter *bootparam)
 {
-    bootparam = P2V(bootparam);
+    if (bootparam) { // I'm the BSP
+        bootparam = P2V(bootparam);
 
-    graphicsInit(&bootparam->graphicsInfo);
-    // printf can be used after the graphics initialization
-    printf("!!!myos kernel!!!\n");
-    printf("kernel area:%p-%p\n", _kernel_start, _kernel_end);
+        // printf can be used after the graphics initialization
+        graphicsInit(&bootparam->graphicsInfo);
+        printf("!!!myos kernel!!!\n");
+        printf("kernel area:0x%016lx-0x%016lx\n", _kernel_start, _kernel_end);
 
-    // archtecture-specific initialization routines may use ACPI tables
-    acpiInit((MyOsAcpiRsdpDescriptor *)bootparam->acpiTableAddr);
+        // archtecture-specific initialization routines may use ACPI tables
+        acpiInit((MyOsAcpiRsdpDescriptor *)bootparam->acpiTableAddr);
 
-    archInit(bootparam);
+        archInit(bootparam);
 
-    timerInit();
+        timerInit();
 
-    printf("!!!myos kernel initialization done!!!\n");
+        mpInit();
+
+        printf("!!!myos kernel initialization done!!!\n");
+    } else {
+        printf("!!!AP %u awaked!!!\n", getLocalApicId());
+        archInitForAp();
+        nAwakedCpus++;
+    }
     while (1) halt();
 }
 

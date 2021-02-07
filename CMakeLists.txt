@@ -32,10 +32,12 @@ add_subdirectory(src)
 add_custom_target(run
     COMMAND qemu-system-x86_64
                 -m 4G
+                -smp cores=2,threads=1,sockets=2
                 --bios ${CMAKE_CURRENT_BINARY_DIR}/image/OVMF.fd
                 -hda fat:rw:${CMAKE_CURRENT_BINARY_DIR}/image
                 -net none
                 #-d int -no-reboot -no-shutdown
+                #-s
                 #-s -S
     DEPENDS image
 )
