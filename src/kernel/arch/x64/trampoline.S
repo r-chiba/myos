@@ -23,7 +23,7 @@ ASMFUNC_START(ap_entry)
     movw    %ax, %fs
     movw    %ax, %gs
     movw    %ax, %ss
-    .byte	0xbc /* movw $(tmp_stack-ap_entry), %sp */
+    .byte   0xbc /* movw $(tmp_stack-ap_entry), %sp */
     .long   tmp_stack-ap_entry
 
     /* save the relocated address of .trampoline to %ebx */
@@ -32,7 +32,7 @@ ASMFUNC_START(ap_entry)
     shll    $4, %ebx
 
     /* load GDT */
-    .byte	0xb8 /* movw $(gdtr_trampoline-ap_entry), %ax */
+    .byte   0xb8 /* movw $(gdtr_trampoline-ap_entry), %ax */
     .long   gdtr_trampoline-ap_entry
     orl     %ebx, 2(%eax) /* add the relocated address to the gdtr base field */
     lgdt    (%eax)
@@ -44,7 +44,7 @@ ASMFUNC_START(ap_entry)
 
     /* go to 32-bit world */
     xorl    %eax, %eax
-    .byte	0xb8 /* movw $(ap_entry32-ap_entry), %ax */
+    .byte   0xb8 /* movw $(ap_entry32-ap_entry), %ax */
     .long   ap_entry32-ap_entry
     orl     %ebx, %eax
     pushw   $(1<<3)
@@ -57,7 +57,7 @@ ASMFUNC_START(ap_entry32)
     cli
 
     /* set segment registers and the stack pointer */
-    leal	stack_trampoline-ap_entry(%ebx), %ecx
+    leal    stack_trampoline-ap_entry(%ebx), %ecx
     movw    $(2<<3), %ax
     movw    %ax, %ds
     movw    %ax, %es
@@ -73,7 +73,7 @@ ASMFUNC_START(ap_entry32)
     movl    %eax, %cr4
 
     /* set cr3 to the temporal page table */
-    leal	pml4_trampoline-ap_entry(%ebx), %eax
+    leal    pml4_trampoline-ap_entry(%ebx), %eax
     movl    (%eax), %eax
     movl    %eax, %cr3
     
@@ -89,7 +89,7 @@ ASMFUNC_START(ap_entry32)
     movl    %eax, %cr0
 
     /* go to 64-bit world */
-    leal	ap_entry64-ap_entry(%ebx), %eax
+    leal    ap_entry64-ap_entry(%ebx), %eax
     pushl   $(3<<3)
     pushl   %eax
     lretl
@@ -98,7 +98,7 @@ ASMFUNC_END(ap_entry32)
 ASMFUNC_START(ap_entry64)
     .code64
     cli
-    leaq	kentry_ap-ap_entry(%rbx), %rax
+    leaq    kentry_ap-ap_entry(%rbx), %rax
     movq    (%rax), %rax
     callq   *%rax
 ASMFUNC_END(ap_entry64)
