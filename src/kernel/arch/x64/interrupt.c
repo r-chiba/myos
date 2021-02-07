@@ -116,16 +116,13 @@ static void localApicInit(void)
     cpuid(0x1, &eax, &ebx, &ecx, &edx);
     KASSERT(edx & CPUID_FEATURE_EDX_APIC, "APIC unsupported\n");
 
-    if (amIBsp()) disableLegacyPic();
+    // TODO: is this needed only for BSP?
+    //if (amIBsp()) disableLegacyPic();
+    disableLegacyPic();
 
     // get the base address of Local APIC register space
     // TODO: must map the register space as UC (cache-disable) memory
     // size of register space is 4 KiB?
-#if 0
-    uint64_t msrVal = readMsr(MSR_APIC_BASE);
-    // base address is at bit 51-12
-    apicBase = P2V(msrVal & 0x000ffffffffff000ul);
-#endif
     apicBase = getLocalApicBaseAddr();
     DEBUG_PRINT("LOCAL APIC BASE=0x%016lx\n", apicBase);
 
@@ -159,7 +156,7 @@ static void localApicInit(void)
                         entry->flags);
 #endif
                 if ((entry->flags & (1u<<0))
-                    || (!(entry->flags & (1u<<0)) && (entry->flags * (1u<<1)))) {
+                    || (!(entry->flags & (1u<<0)) && (entry->flags & (1u<<1)))) {
                     // the processor is able to be enabled
                     memset(&cpuInfo[nCpus], 0, sizeof(cpuInfo[nCpus]));
                     cpuInfo[nCpus].acpiProcessorId = entry->acpiProcessorId;

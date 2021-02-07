@@ -11,7 +11,6 @@ SECTIONS {
         *(.text.entry)
         *(.text)
     }
-    _kernel_tmp1 = .;
     .data : AT(ADDR(.data) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
     { 
         *(.data)
@@ -20,12 +19,10 @@ SECTIONS {
         *(.trampoline)
         PROVIDE_HIDDEN(_trampoline_end = .);
     }
-    _kernel_tmp2 = .;
     .rodata : AT(ADDR(.rodata) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
     { 
         *(.rodata)
     }
-    _kernel_tmp3 = .;
     .bss : AT(ADDR(.bss) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
            ALIGN(CONFIG_PAGE_SIZE)
     { 
@@ -34,7 +31,6 @@ SECTIONS {
         *(.COMMON)
         PROVIDE_HIDDEN(_bss_end = .);
     }
-    _kernel_tmp4 = .;
 
     /* global descriptor table */
     .gdt : AT(ADDR(.gdt) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
@@ -42,24 +38,13 @@ SECTIONS {
     {
         *(.gdt)
     }
-    _kernel_tmp5 = .;
     /* interrupt descriptor table */
     .idt : AT(ADDR(.idt) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
            ALIGN(8)
     {
         *(.idt)
     }
-#if 0
-    _kernel_tmp6 = .;
-    .trampoline : AT(ADDR(.trampoline) - CONFIG_KERNEL_VBASE + CONFIG_KERNEL_PBASE)
-                  ALIGN(CONFIG_PAGE_SIZE)
-    { 
-        PROVIDE_HIDDEN(_trampoline_start = .);
-        *(.trampoline)
-        PROVIDE_HIDDEN(_trampoline_end = .);
-    }
-#endif
-    /* . = ALIGN(CONFIG_PAGE_SIZE); */
+    . = ALIGN(CONFIG_PAGE_SIZE);
     PROVIDE_HIDDEN(_kernel_end = .);
 
     /DISCARD/ :

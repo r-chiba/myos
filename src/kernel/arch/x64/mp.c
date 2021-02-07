@@ -29,7 +29,7 @@ void wakeupAp(uint8_t dest, paddr_t entry)
     uint64_t *stack =
         (uint64_t *)(entry + ((size_t)&stack_trampoline-(size_t)_trampoline_start));
 
-    __asm__ __volatile__ ("movq %%cr3, %%rax" : "+a"(*pt) ::);
+    __asm__ __volatile__ ("movq %%cr3, %%rax" : "=a"(*pt) ::);
     //DEBUG_PRINT("pt: 0x%016lx\n", pt);
     //DEBUG_PRINT("*pt: 0x%016lx\n", *pt);
 
